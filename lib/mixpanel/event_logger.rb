@@ -12,17 +12,20 @@ module Mixpanel
     
     def initialize( token )
       @token = token
-      @logger = Object.const_get(:RAILS_DEFAULT_LOGGER)
+      if( Object.const_defined?(:RAILS_DEFAULT_LOGGER) )
+        @logger = Object.const_get(:RAILS_DEFAULT_LOGGER)
+      end
     end
     
     def record( name, props = {}, request = nil )
       uri = URI.parse( generate_url(name, props, {}, request) )
-      
-      req = Net::HTTP::Get.new("#{uri.path}?#{uri.query}")
+      req = Net::HTTP::Post.new(uri.path)
+      req.body = uri.query
       res = Net::HTTP.start(uri.host, uri.port) {|http|
         http.request(req)
       }
-      if( res != 200 )
+      
+      if( !res.is_a?(Net::HTTPSuccess) )
         error = "Failed to log event:#{name}, properties:#{props.inspect}"
         if( @logger )
           @logger.error( error )
@@ -45,7 +48,9 @@ module Mixpanel
         event_props[:ip] = request.remote_ip
       end
       
-      encoded = Base64::encode64(event_props.to_json)[0..-2]
+      data = { :event => 'name', :properties => event_props }
+      
+      encoded = Base64::encode64(data.to_json).gsub(/\s/, '')
       params[:data] = encoded
       param_strings = []
       params.each_pair {|key,val|
