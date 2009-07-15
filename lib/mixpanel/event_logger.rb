@@ -21,8 +21,8 @@ module Mixpanel
       send_request( generate_url(name, props, {}, request) )
     end
     
-    def record_funnel( funnel, step, goal )
-      send_request( generate_funnel_url(funnel, step, goal) )
+    def record_funnel( funnel, step, goal, props = {}, request = nil )
+      send_request( generate_funnel_url(funnel, step, goal, props, {}, request) )
     end
     
     # details of which params are allowed, see:
@@ -34,12 +34,12 @@ module Mixpanel
       event_props = props.dup
       event_props[:token] = @token
       event_props[:time] = Time.now.to_i if( !props[:time] )
-      if( !props[:ip] && request.respond_to?(:remote_ip) )
-        event_props[:ip] = request.remote_ip
+      if( request.respond_to?(:remote_ip) )
+        event_props[:ip] = request.remote_ip if( !props[:ip] )
+        event_props[:distinct_id] = request.remote_ip if( !props[:distinct_id] )
       end
       
       data = { :event => name, :properties => event_props }
-      
       encoded = Base64::encode64(data.to_json).gsub(/\s/, '')
       params[:data] = encoded
       param_strings = []
