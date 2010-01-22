@@ -17,7 +17,26 @@ module Mixpanel
       end
     end
     
+    #
+    ## Record an event
+    # event_logger.record('Landing', { :distinct_id => 1 })
+    #
+    ## Record a funnel goal
+    # event_logger.record('Landing', { :distinct_id => 1, :funnel => ['Signup', 1] })
+    #
+    ## Record a funnel goal and an event
+    # event_logger.record('Landing', { :distinct_id => 1, :funnel => ['Signup', 1], :event => true })
+    #
+
     def record( name, props = {}, request = nil )
+      event  = props.delete(:event)
+      funnel = props.delete(:funnel)
+
+      record_event(name, props, request) if funnel.nil? || event
+      record_funnel(funnel[0], funnel[1], name, props, request) if funnel
+    end
+
+    def record_event( name, props = {}, request = nil )
       send_request( generate_url(name, props, {}, request) )
     end
     
