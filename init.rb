@@ -1,0 +1,1 @@
+require File.expand_path('lib/mixpanel', File.dirname(__FILE__))
