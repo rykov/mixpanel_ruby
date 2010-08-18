@@ -37,11 +37,13 @@ module Mixpanel
     end
 
     def record_event( name, props = {}, request = nil )
-      send_request( generate_url(name, props, {}, request) )
+      send_request( generate_url(name, props, {}, request) ) ||
+      on_failure("Failed to log event:#{name}, properties:#{props.inspect}")
     end
     
     def record_funnel( funnel, step, goal, props = {}, request = nil )
-      send_request( generate_funnel_url(funnel, step, goal, props, {}, request) )
+      send_request( generate_funnel_url(funnel, step, goal, props, {}, request) ) ||
+      on_failure("Failed to log funnel:#{funnel}/#{step}/#{goal}, properties:#{props.inspect}")
     end
     
     # details of which params are allowed, see:
@@ -75,7 +77,7 @@ module Mixpanel
         params, request )
     end
     
-    protected
+  protected
     
     def send_request( url )
       uri = URI.parse( url )
@@ -85,16 +87,12 @@ module Mixpanel
         http.request(req)
       }
       
-      if( !res.is_a?(Net::HTTPSuccess) )
-        error = "Failed to log event:#{name}, properties:#{props.inspect}"
-        if( @logger )
-          @logger.error( error )
-        else
-          STDERR.puts( error )
-        end
-        return false
-      end
-      return true
+      return res.is_a?(Net::HTTPSuccess)
+    end
+
+    def on_failure(error)
+      @logger ? @logger.error( error ) : STDERR.puts( error )
+      return false
     end
   end
 end
